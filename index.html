@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Sales Predictor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="js/app.js"></script>
+<body>
+<!-- ═══════════════════════════════════════════════════════ HEADER -->
+<div class="header">
+<div class="header-left">
+<div class="logo">📈</div>
+<div>
+<h1>AI Sales Predictor</h1>
+<p>Upload any CSV → Instant ML predictions + Smart insights</p>
+</div>
+</div>
+<div class="header-right">
+<button class="btn btn-ghost" id="btn-reset" onclick="resetApp()" style="display:none">↩ New File</button>
+<button class="btn-sample" onclick="loadSampleData()">▶ Try Sample CSV</button>
+</div>
+</div>
+<!-- ═══════════════════════════════════════════════════════ STEPS -->
+<div class="steps">
+<div class="step"><div class="step-dot active" id="dot-0"></div><span class="step-label active" id="lbl-0">① Upload File</span></div>
+<div class="step"><div class="step-dot" id="dot-1"></div><span class="step-label" id="lbl-1">② Configure Columns</span></div>
+<div class="step"><div class="step-dot" id="dot-2"></div><span class="step-label" id="lbl-2">③ Results &amp; Forecast</span></div>
+</div>
+<div class="main">
+<!-- ════════════════════════════════════════ SECTION: UPLOAD -->
+<div class="section active" id="sec-upload">
+<div class="upload-wrap">
+<div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+<div class="icon">📂</div>
+<h2>Drop your CSV file here</h2>
+<p>or click to browse · Any CSV with numeric data<br/>Headers required · Min 3 rows</p>
+<div class="tags">
+<span class="tag">sales.csv</span>
+<span class="tag">revenue_2024.csv</span>
+<span class="tag">monthly_data.csv</span>
+<span class="tag">any_data.csv</span>
+</div>
+<input accept=".csv,.txt" id="file-input" onchange="handleFileInput(event)" style="display:none" type="file"/>
+</div>
+<div class="feature-grid">
+<div class="feature-card"><strong>✅ Any numeric target</strong><span>Sales, Revenue, Units, Profit…</span></div>
+<div class="feature-card"><strong>✅ Any time label</strong><span>Month, Date, Quarter, Week…</span></div>
+<div class="feature-card"><strong>✅ Multiple columns</strong><span>Up to 20 features analyzed</span></div>
+<div class="feature-card"><strong>✅ Smart insights</strong><span>Auto trend &amp; accuracy analysis</span></div>
+</div>
+<p class="hint">💡 No file? <a onclick="loadSampleData()">Try the sample CSV</a> to see it in action.</p>
+</div>
+</div>
+<!-- ════════════════════════════════════════ SECTION: MAPPING -->
+<div class="section" id="sec-mapping">
+<div class="mapping-wrap">
+<div class="alert-success">
+<span style="font-size:22px">✅</span>
+<div>
+<strong id="file-name-label">File loaded</strong><br/>
+<small id="file-stats">0 rows · 0 columns</small>
+</div>
+</div>
+<div class="config-box">
+<div class="section-title"><div class="bar"></div><span>Configure Columns</span></div>
+<div>
+<div class="field-label">🏷️ Label / Time Column</div>
+<div class="field-hint">Used as X-axis (e.g. Month, Date)</div>
+<select id="sel-label"></select>
+</div>
+<div>
+<div class="field-label">🎯 Target Column to Predict</div>
+<div class="field-hint">The numeric value to forecast (e.g. Sales)</div>
+<select id="sel-target"></select>
+</div>
+<div>
+<div class="field-label">📊 Additional Columns (for correlation)</div>
+<div class="field-hint">Select up to 3 numeric columns</div>
+<div class="toggle-group" id="extra-cols-group"></div>
+</div>
+<div>
+<div class="field-label">🔮 Forecast Periods: <span id="forecast-val" style="color:var(--accent)">6</span></div>
+<input id="forecast-range" max="12" min="1" oninput="document.getElementById('forecast-val').textContent=this.value" type="range" value="6"/>
+<div class="range-labels"><span>1</span><span>6</span><span>12</span></div>
+</div>
+</div>
+<div class="preview-box">
+<div class="preview-label">Data Preview (first 5 rows)</div>
+<div class="data-table-wrap"><table id="preview-table"></table></div>
+</div>
+<button class="btn btn-primary" onclick="runPipeline()">▶ Run ML Pipeline &amp; Generate Forecast</button>
+</div>
+</div>
+<!-- ════════════════════════════════════════ SECTION: RESULTS -->
+<div class="section" id="sec-results">
+<!-- KPIs -->
+<div class="kpi-grid" id="kpi-grid"></div>
+<!-- Smart Insights -->
+<div class="insight-box">
+<div class="insight-header">
+<span>🧠</span>
+<strong>Smart Insights</strong>
+<span class="tag green">Auto-generated</span>
+</div>
+<div class="insight-lines" id="insight-text"></div>
+</div>
+<!-- Tabs -->
+<div class="tabs">
+<button class="tab-btn active" onclick="switchTab('overview',this)">📊 Overview</button>
+<button class="tab-btn" onclick="switchTab('forecast',this)">🔮 Forecast</button>
+<button class="tab-btn" onclick="switchTab('correlation',this)">🔬 Correlation</button>
+<button class="tab-btn" onclick="switchTab('data',this)">🗃️ Data</button>
+</div>
+<!-- Overview -->
+<div class="tab-panel active" id="tab-overview">
+<div class="chart-panel">
+<div class="section-title"><div class="bar"></div><span id="chart1-title">Actual vs Predicted</span><span class="tag accent" style="margin-left:4px">LINEAR REGRESSION</span></div>
+<div class="chart-wrap" style="height:280px"><canvas id="chart-actual-pred"></canvas></div>
+</div>
+<div class="chart-panel">
+<div class="section-title"><div class="bar"></div><span>Residuals (Actual − Predicted)</span></div>
+<div class="chart-wrap" style="height:200px"><canvas id="chart-residuals"></canvas></div>
+</div>
+</div>
+<!-- Forecast -->
+<div class="tab-panel" id="tab-forecast">
+<div class="chart-panel">
+<div class="section-title"><div class="bar"></div><span>Forecast with 88–112% Confidence Band</span><span class="tag accent" id="forecast-badge" style="margin-left:4px"></span></div>
+<div class="chart-wrap" style="height:300px"><canvas id="chart-forecast"></canvas></div>
+</div>
+<div class="forecast-grid" id="forecast-cards"></div>
+</div>
+<!-- Correlation -->
+<div class="tab-panel" id="tab-correlation">
+<div class="two-col" id="correlation-charts">
+<div class="chart-panel">
+<div class="section-title"><div class="bar"></div><span>Model Statistics</span></div>
+<div class="stats-table" id="stats-table"></div>
+</div>
+</div>
+</div>
+<!-- Data -->
+<div class="tab-panel" id="tab-data">
+<div class="chart-panel">
+<div class="section-title">
+<div class="bar"></div><span>Full Dataset with Predictions</span>
+<span class="tag accent" id="data-rows-badge" style="margin-left:4px"></span>
+</div>
+<div class="data-table-wrap"><table class="data-table" id="data-table"></table></div>
+</div>
+</div>
+</div><!-- /sec-results -->
+</div><!-- /main -->
+
+<script src="js/app.js"></script></body>
+</html>
